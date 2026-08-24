@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BioCore Self-Sustained Engine</title>
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkJpb0NvcmUgQUkgQ2hhdCIsCiAgInNob3J0X25hbWUiOiAiQmlvQ29yZSIsCiAgInN0YXJ0X3VybCI6ICJpbmRleC5odG1sIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGIwZjE5IiwKICAidGhlbWVfY29sb3IiOiAiIzBiMGYxOSIKfQ==">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkJpb0NvcmUgQUkgQ2hhdCIsCiAgInNob3J0X25hbWUiOiAiQmlvQ29yZSIsCiAgInN0YXJ0X3VybCI6ICJpbmRleC5odG1sIiwKICAiaWRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBiMGYxOSIsCiAgInRoZW1lX2NvbG9yIjogIzBiMGYxOSIKfQ==">
     <style>
         :root {
             --bg: #0b0f19;
@@ -29,10 +29,9 @@
         .system-tray { background: #111724; padding: 12px; border-bottom: 1px solid #1e293b; text-align: center; }
         .boot-btn { background: var(--green); color: #0b0f19; border: none; padding: 10px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; font-size: 0.9rem; }
         
-        /* New Structural Progress Indicator Metrics UI */
         .progress-container { margin-top: 10px; background: #070a12; border: 1px solid #1e293b; padding: 10px; border-radius: 6px; display: none; text-align: left; }
         .progress-text { font-family: monospace; font-size: 0.75rem; color: #38bdf8; margin-bottom: 6px; display: flex; justify-content: space-between; }
-        .progress-bar-bg { width: 100%; height: 6dp; background: #1e293b; border-radius: 4px; overflow: hidden; }
+        .progress-bar-bg { width: 100%; height: 6px; background: #1e293b; border-radius: 4px; overflow: hidden; }
         .progress-bar-fill { width: 0%; height: 100%; background: var(--green); transition: width 0.1s; }
 
         .chat-box { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
@@ -52,9 +51,44 @@
         .send-btn svg { width: 18px; height: 18px; fill: #0b0f19; transform: rotate(45deg); margin-left: -2px; margin-top: 2px; }
     </style>
 
-    <script type="module">
-        import { pipeline, env } from 'https://jsdelivr.net';
+    <!-- Use standard, non-restricted script loading layers to bypass black screen crashes -->
+    <script src="https://jsdelivr.net"></script>
+</head>
+<body>
 
+    <div class="window">
+        <header>
+            <div class="logo"><div class="dot"></div> BioCore Independent</div>
+            <div id="engineStatus" class="badge">Brain Offline</div>
+        </header>
+
+        <div class="system-tray">
+            <button id="bootButton" onclick="buildBrainLocally()" class="boot-btn">Load & Initialize Native Brain Core</button>
+            
+            <div id="progressUi" class="progress-container">
+                <div id="progressLabel" class="progress-text">
+                    <span>Connecting to network matrix nodes...</span>
+                    <span>0MB / 0MB (0%)</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="progressBarFill" class="progress-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-box" id="chatThread"></div>
+
+        <div class="tray">
+            <div class="input-wrap">
+                <input type="text" id="userInput" placeholder="Message standalone BioCore AI..." autocomplete="off" onkeydown="if(event.key === 'Enter') runLocalInference()">
+            </div>
+            <button class="send-btn" onclick="runLocalInference()">
+                <svg viewBox="0 0 24 24"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
         let localBrainEngine = null;
         const statusBadge = document.getElementById('engineStatus');
         const actionButton = document.getElementById('bootButton');
@@ -64,30 +98,25 @@
         const chatWindow = document.getElementById('chatThread');
         const inputField = document.getElementById('userInput');
 
-        // Main Callback Function Intercepting Web Stream Loading Logs
         function onProgressUpdate(statusData) {
             if (statusData.status === 'progress') {
                 progressUi.style.display = "block";
                 const percentage = statusData.progress.toFixed(1);
-                
-                // Calculate and output values into readable file data formats
                 const downloadedMb = (statusData.loaded / (1024 * 1024)).toFixed(1);
                 const totalMb = (statusData.total / (1024 * 1024)).toFixed(1);
                 
-                progressLabel.innerHTML = `<span>Downloading file segment...</span> <span>${downloadedMb}MB / ${totalMb}MB (${percentage}%)</span>`;
+                progressLabel.innerHTML = `<span>Downloading segments...</span> <span>${downloadedMb}MB / ${totalMb}MB (${percentage}%)</span>`;
                 progressBarFill.style.width = `${percentage}%`;
-            } else if (statusData.status === 'ready') {
-                progressLabel.innerText = "Processing system definitions... Finishing.";
             }
         }
 
         async function buildBrainLocally() {
             try {
                 actionButton.disabled = true;
-                statusBadge.innerText = "Downloading Brain Core...";
+                statusBadge.innerText = "Downloading Brain...";
                 
-                // Route callback function into the core framework loading layer
-                localBrainEngine = await pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Chat', {
+                // Invoke standard global constructor mappings
+                localBrainEngine = await transformers.pipeline('text-generation', 'Xenova/Qwen1.5-0.5B-Chat', {
                     progress_callback: onProgressUpdate
                 });
                 
@@ -100,7 +129,7 @@
             } catch (err) {
                 statusBadge.innerText = "Security Interruption";
                 actionButton.disabled = false;
-                alert("Please launch via Chrome preview layout to grant local storage files permissions.");
+                alert("Please launch via Chrome browser instead of the default viewer.");
             }
         }
 
@@ -120,43 +149,22 @@
             wrapper.className = 'wrapper ai-side';
             const logElement = document.createElement('div');
             logElement.className = 'thought-log';
-            logElement.innerText = 'Initializing Local CPU/GPU Matrix Mathematics...';
+            logElement.innerText = 'Initializing Matrix Mathematics...';
             wrapper.appendChild(logElement);
             const textBubble = document.createElement('div');
             textBubble.className = 'bubble';
-            textBubble.innerText = 'Reasoning step-by-step...';
+            textBubble.innerText = 'Reasoning...';
             wrapper.appendChild(textBubble);
             chatWindow.appendChild(wrapper);
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
                 const internalTemplate = `<|im_start|>system\nYou are BioCore AI, a self-contained on-device scientific brain. Compute the target user problem structurally using strict physics and programming laws.<|im_end|>\n<|im_start|>user\n${promptText}<|im_end|>\n<|im_start|>assistant\n`;
-                logElement.innerText = "■ LOCAL COGNITIVE PATHWAY: PROCESSING MATHEMATICAL TOKENS";
 
                 const computationResult = await localBrainEngine(internalTemplate, {
-                    max_new_tokens: 300,
-                    temperature: 0.3,
-                    repetition_penalty: 1.15
+                    max_new_tokens: 250,
+                    temperature: 0.2
                 });
 
                 let outputString = computationResult.generated_text;
                 const cleanupMarker = outputString.lastIndexOf("<|im_start|>assistant\n");
-                if (cleanupMarker !== -1) {
-                    outputString = outputString.substring(cleanupMarker + 22);
-                }
-
-                logElement.innerText = "■ LOCAL HARDWARE EXECUTION LOGS: STABLE SUCCESS";
-                textBubble.innerText = outputString.trim();
-            } catch (runtimeError) {
-                logElement.style.display = 'none';
-                textBubble.innerText = "Local processing breakdown error: " + runtimeError.message;
-                textBubble.style.color = "#f43f5e";
-            }
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        function renderMessage(txt, side) {
-            const wrap = document.createElement('div');
-            wrap.className = `wrapper ${side}-side`;
-            const bbl = document.createElement('div');
-            bbl.className = 'bubble';
